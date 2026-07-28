@@ -1,0 +1,39 @@
+name: lion
+description: "Lion Fitness — organize your workout cycle, track your body metrics, and train to your own soundtrack."
+publish_to: 'none'
+
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.12.2
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  cupertino_icons: ^1.0.8
+
+  # State management
+  provider: ^6.1.2
+
+  # Firebase (cloud sync). The app falls back to local storage until
+  # `flutterfire configure` is run — see README.
+  firebase_core: ^4.4.0
+  firebase_auth: ^6.4.0
+  cloud_firestore: ^6.4.0
+
+  # Local storage fallback
+  shared_preferences: ^2.3.0
+
+  # Spotify embed player
+  webview_flutter: ^4.10.0
+  url_launcher: ^6.3.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true
