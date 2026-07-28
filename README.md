@@ -35,8 +35,14 @@ The plan validator continuously checks your schedule against widely accepted gui
 ### 🎵 Spotify player
 An embedded Spotify player (official Spotify embed — no API keys needed) with curated workout playlists, or paste any Spotify playlist/album/track/artist link.
 
+### 🏋️ Live workout mode
+Hit **Start workout** on a training day: tick off every set, get an automatic rest countdown between sets (with haptics), watch the session progress bar fill up, and log the session with its real duration when you finish.
+
+### ⚖️ Weight progress
+Log your weight any day (one tap from the profile) — the app keeps a history, draws a trend chart, shows your total change, and displays your BMI on a color-coded WHO gauge. Profile weight edits are recorded automatically.
+
 ### 📈 Tracking
-Mark sessions done, keep a history, and watch your streak grow.
+Mark sessions done (with or without set tracking), keep a history with durations, watch your streak grow, and see the next 7 days at a glance on the dashboard.
 
 ## Getting started
 
@@ -73,7 +79,8 @@ The app works **immediately** with on-device storage. To enable cloud sync:
 
 ## Tech
 
-- Flutter (Material 3, dark "lion" theme), `provider` for state
+- Flutter (Material 3, dark "lion" theme, `google_fonts` typography), `provider` for state
+- Dependency-free custom-painted weight chart and BMI gauge
 - `firebase_core` / `firebase_auth` (anonymous) / `cloud_firestore`, with a `shared_preferences` fallback behind a single `StorageService` interface
 - `webview_flutter` + `url_launcher` for the Spotify embed
 - Core logic (cycle math, health formulas, plan validation, Spotify URL parsing) covered by unit tests: `flutter test`

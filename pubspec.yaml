@@ -16,6 +16,9 @@ dependencies:
   # State management
   provider: ^6.1.2
 
+  # Typography
+  google_fonts: ^6.2.1
+
   # Firebase (cloud sync). The app falls back to local storage until
   # `flutterfire configure` is run — see README.
   firebase_core: ^4.4.0

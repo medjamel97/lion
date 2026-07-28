@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/session_log.dart';
 import '../models/user_profile.dart';
+import '../models/weight_entry.dart';
 import '../models/workout_plan.dart';
 
 /// Persistence abstraction. The app uses Firestore when Firebase is
@@ -25,6 +26,9 @@ abstract class StorageService {
 
   Future<String?> loadSpotifyUrl();
   Future<void> saveSpotifyUrl(String url);
+
+  Future<List<WeightEntry>> loadWeightEntries();
+  Future<void> saveWeightEntries(List<WeightEntry> entries);
 }
 
 // ─────────────────────────────────────────────────────────────────────
@@ -33,6 +37,7 @@ class LocalStorageService implements StorageService {
   static const _planKey = 'lion_plan';
   static const _logsKey = 'lion_logs';
   static const _spotifyKey = 'lion_spotify';
+  static const _weightsKey = 'lion_weights';
 
   @override
   String get backendName => 'On-device storage';
@@ -85,6 +90,21 @@ class LocalStorageService implements StorageService {
   @override
   Future<void> saveSpotifyUrl(String url) async {
     await (await _prefs).setString(_spotifyKey, url);
+  }
+
+  @override
+  Future<List<WeightEntry>> loadWeightEntries() async {
+    final raw = (await _prefs).getString(_weightsKey);
+    if (raw == null) return [];
+    return (jsonDecode(raw) as List)
+        .map((e) => WeightEntry.fromJson(Map<String, dynamic>.from(e)))
+        .toList();
+  }
+
+  @override
+  Future<void> saveWeightEntries(List<WeightEntry> entries) async {
+    await (await _prefs).setString(
+        _weightsKey, jsonEncode(entries.map((e) => e.toJson()).toList()));
   }
 }
 
@@ -158,6 +178,24 @@ class FirestoreStorageService implements StorageService {
   @override
   Future<void> saveSpotifyUrl(String url) async {
     await _userDoc.set({'spotifyUrl': url}, SetOptions(merge: true));
+  }
+
+  @override
+  Future<List<WeightEntry>> loadWeightEntries() async {
+    final snap = await _userDoc.get();
+    final data = snap.data()?['weights'];
+    if (data == null) return [];
+    return (data as List)
+        .map((e) => WeightEntry.fromJson(Map<String, dynamic>.from(e)))
+        .toList();
+  }
+
+  @override
+  Future<void> saveWeightEntries(List<WeightEntry> entries) async {
+    await _userDoc.set(
+      {'weights': entries.map((e) => e.toJson()).toList()},
+      SetOptions(merge: true),
+    );
   }
 
   /// Firestore returns nested maps as `Map<String, dynamic>` but nested lists

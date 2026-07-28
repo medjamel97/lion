@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:lion/models/user_profile.dart';
+import 'package:lion/models/weight_entry.dart';
 import 'package:lion/models/workout_plan.dart';
 import 'package:lion/services/health_calculator.dart';
 import 'package:lion/services/plan_validator.dart';
@@ -128,6 +129,25 @@ void main() {
         spotifyEmbedUrl('https://open.spotify.com/embed/track/abc123'),
         contains('/embed/track/abc123'),
       );
+    });
+
+    test('handles locale-prefixed links', () {
+      expect(
+        spotifyEmbedUrl('https://open.spotify.com/intl-fr/album/xyz789'),
+        contains('/embed/album/xyz789'),
+      );
+    });
+  });
+
+  group('WeightEntry', () {
+    test('JSON round trip and day key', () {
+      final entry = WeightEntry(date: DateTime(2026, 7, 4, 8, 30), weightKg: 81.4);
+      final restored = WeightEntry.fromJson(entry.toJson());
+      expect(restored.weightKg, 81.4);
+      expect(restored.dayKey, '2026-07-04');
+      // Same calendar day, different time → same key (one entry per day).
+      final evening = WeightEntry(date: DateTime(2026, 7, 4, 22), weightKg: 82);
+      expect(evening.dayKey, entry.dayKey);
     });
   });
 }

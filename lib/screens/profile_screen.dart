@@ -3,7 +3,9 @@ import 'package:provider/provider.dart';
 
 import '../models/user_profile.dart';
 import '../state/app_state.dart';
+import '../widgets/bmi_gauge.dart';
 import '../widgets/stat_card.dart';
+import '../widgets/weight_chart.dart';
 
 /// Body data, calculated health metrics, WHO guidelines and session history.
 class ProfileScreen extends StatelessWidget {
@@ -68,6 +70,74 @@ class ProfileScreen extends StatelessWidget {
           ),
           const SizedBox(height: 8),
 
+          // ── BMI gauge ───────────────────────────────────────────────
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Text('BMI ${metrics.bmi.toStringAsFixed(1)}',
+                          style: theme.textTheme.titleMedium
+                              ?.copyWith(fontWeight: FontWeight.w800)),
+                      const SizedBox(width: 8),
+                      Text('· ${metrics.bmiCategory}',
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                              color: theme.colorScheme.onSurfaceVariant)),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  BmiGauge(bmi: metrics.bmi),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
+
+          // ── Weight progress ─────────────────────────────────────────
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Text('Weight progress',
+                          style: theme.textTheme.titleMedium
+                              ?.copyWith(fontWeight: FontWeight.w800)),
+                      const Spacer(),
+                      FilledButton.tonalIcon(
+                        onPressed: () => _logWeight(context, profile),
+                        icon: const Icon(Icons.add, size: 16),
+                        label: const Text('Log weight'),
+                      ),
+                    ],
+                  ),
+                  if (state.weightEntries.length >= 2) ...[
+                    const SizedBox(height: 4),
+                    Builder(builder: (context) {
+                      final first = state.weightEntries.first.weightKg;
+                      final last = state.weightEntries.last.weightKg;
+                      final delta = last - first;
+                      final sign = delta >= 0 ? '+' : '';
+                      return Text(
+                        '$sign${delta.toStringAsFixed(1)} kg since ${_fmtDate(state.weightEntries.first.date)}',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                            color: theme.colorScheme.onSurfaceVariant),
+                      );
+                    }),
+                  ],
+                  const SizedBox(height: 8),
+                  WeightChart(entries: state.weightEntries),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
+
           // ── Metrics grid ────────────────────────────────────────────
           GridView.count(
             crossAxisCount: 2,
@@ -77,12 +147,6 @@ class ProfileScreen extends StatelessWidget {
             crossAxisSpacing: 8,
             childAspectRatio: 1.9,
             children: [
-              StatCard(
-                label: 'BMI',
-                value: metrics.bmi.toStringAsFixed(1),
-                sub: metrics.bmiCategory,
-                icon: Icons.monitor_weight_outlined,
-              ),
               StatCard(
                 label: 'Healthy weight',
                 value:
@@ -195,6 +259,7 @@ class ProfileScreen extends StatelessWidget {
                 ),
                 subtitle: Text(
                   '${_fmtDate(log.date)}'
+                  '${log.durationMinutes > 0 ? ' · ${log.durationMinutes} min' : ''}'
                   '${log.muscleNames.isEmpty ? '' : ' · ${log.muscleNames.join(', ')}'}',
                   style: theme.textTheme.bodySmall
                       ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
@@ -209,6 +274,47 @@ class ProfileScreen extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  Future<void> _logWeight(BuildContext context, UserProfile profile) async {
+    final state = context.read<AppState>();
+    final ctrl =
+        TextEditingController(text: profile.weightKg.toStringAsFixed(1));
+    final saved = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Log today\'s weight'),
+        content: TextField(
+          controller: ctrl,
+          autofocus: true,
+          keyboardType:
+              const TextInputType.numberWithOptions(decimal: true),
+          decoration: const InputDecoration(
+              labelText: 'Weight (kg)', suffixText: 'kg'),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+    if (saved == true) {
+      final value = double.tryParse(ctrl.text.replaceAll(',', '.'));
+      if (value != null && value >= 30 && value <= 300) {
+        await state.logWeight(value);
+      } else if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Enter a weight between 30 and 300 kg')),
+        );
+      }
+    }
+    ctrl.dispose();
   }
 
   static String _fmtDate(DateTime d) {

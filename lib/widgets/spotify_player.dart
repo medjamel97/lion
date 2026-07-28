@@ -10,9 +10,10 @@ import 'package:webview_flutter/webview_flutter.dart';
 String? spotifyEmbedUrl(String url) {
   final uri = Uri.tryParse(url.trim());
   if (uri == null || !uri.host.contains('spotify.com')) return null;
-  final segments =
-      uri.pathSegments.where((s) => s.isNotEmpty).toList();
-  // Already an embed link: /embed/<type>/<id>
+  // Drop locale prefixes like /intl-fr/ and the /embed/ prefix if present.
+  final segments = uri.pathSegments
+      .where((s) => s.isNotEmpty && !s.startsWith('intl-'))
+      .toList();
   final start = segments.isNotEmpty && segments.first == 'embed' ? 1 : 0;
   if (segments.length < start + 2) return null;
   final type = segments[start];

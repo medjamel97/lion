@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 
 import '../models/session_log.dart';
 import '../models/user_profile.dart';
+import '../models/weight_entry.dart';
 import '../models/workout_plan.dart';
 import '../services/health_calculator.dart';
 import '../services/plan_validator.dart';
@@ -16,6 +17,7 @@ class AppState extends ChangeNotifier {
   UserProfile? _profile;
   WorkoutPlan _plan = WorkoutPlan.empty();
   List<SessionLog> _logs = [];
+  List<WeightEntry> _weights = [];
   String _spotifyUrl = kDefaultSpotifyUrl;
   bool _loaded = false;
 
@@ -26,6 +28,7 @@ class AppState extends ChangeNotifier {
   UserProfile? get profile => _profile;
   WorkoutPlan get plan => _plan;
   List<SessionLog> get logs => List.unmodifiable(_logs);
+  List<WeightEntry> get weightEntries => List.unmodifiable(_weights);
   String get spotifyUrl => _spotifyUrl;
   String get backendName => storage.backendName;
 
@@ -40,6 +43,8 @@ class AppState extends ChangeNotifier {
       final plan = await storage.loadPlan();
       if (plan != null) _plan = plan;
       _logs = await storage.loadLogs();
+      _weights = await storage.loadWeightEntries()
+        ..sort((a, b) => a.date.compareTo(b.date));
       _spotifyUrl = await storage.loadSpotifyUrl() ?? kDefaultSpotifyUrl;
     } catch (e) {
       debugPrint('Failed to load saved data: $e');
@@ -49,9 +54,37 @@ class AppState extends ChangeNotifier {
   }
 
   Future<void> saveProfile(UserProfile profile) async {
+    final weightChanged = _profile?.weightKg != profile.weightKg;
     _profile = profile;
     notifyListeners();
     await storage.saveProfile(profile);
+    // Every weight change becomes a data point on the progress chart.
+    if (weightChanged || _weights.isEmpty) {
+      await logWeight(profile.weightKg);
+    }
+  }
+
+  /// Records today's weight (one entry per calendar day, newest wins).
+  Future<void> logWeight(double weightKg) async {
+    final entry = WeightEntry(date: DateTime.now(), weightKg: weightKg);
+    _weights = [
+      ..._weights.where((w) => w.dayKey != entry.dayKey),
+      entry,
+    ]..sort((a, b) => a.date.compareTo(b.date));
+    // Keep the profile's current weight in sync with the latest entry.
+    if (_profile != null && _profile!.weightKg != weightKg) {
+      _profile = _profile!.copyWith(weightKg: weightKg);
+      await storage.saveProfile(_profile!);
+    }
+    notifyListeners();
+    await storage.saveWeightEntries(_weights);
+  }
+
+  Future<void> removeWeightEntry(WeightEntry entry) async {
+    _weights =
+        _weights.where((w) => w.dayKey != entry.dayKey).toList();
+    notifyListeners();
+    await storage.saveWeightEntries(_weights);
   }
 
   Future<void> savePlan(WorkoutPlan plan) async {
